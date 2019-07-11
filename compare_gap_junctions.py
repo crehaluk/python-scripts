@@ -10,7 +10,13 @@ Created on Tue Jul  9 15:24:02 2019
 
 import requests
 from collections import defaultdict
+
 from requests.auth import HTTPBasicAuth
+from neuron_info import nclass 
+import networkx as nx
+
+from networkx.algorithms.operators import binary
+
 
 # Replace these fake values with your own.
 token = '5077a5c3746ba24610f51afd1304e4357aa48af2'
@@ -78,7 +84,10 @@ def get_gap_junctions_from_catmaid():
        neuron1_name = skid_to_name[neuron1_id].replace('[', '').replace(']', '')
        neuron2_name = skid_to_name[neuron2_id].replace('[', '').replace(']', '')
        
-       processed_synapse = (neuron1_name, neuron2_name, 'Christine Dataset')
+       neuron1_class = nclass(neuron1_name)
+       neuron2_class = nclass(neuron2_name)
+       
+       processed_synapse = (neuron1_class, neuron2_class, 'Christine Dataset')
        synapses.append(processed_synapse)
     
     return synapses
@@ -147,11 +156,58 @@ def get_gap_junctions_from_durbin(path):
             dataset = {'N2U': 'white_adult', 'JSH': 'white_l4'}[dataset]
             
             if typ == 'Gap_junction' and (post, pre, dataset) not in edges_done:
-                edges_done.append((pre, post, dataset))
+                pre_class = nclass(pre)
+                post_class = nclass(post)
+                edges_done.append((pre_class, post_class, dataset))
 
-    return edges_done        
+    return edges_done     
 
-        
+def gj_in_dataset(gj, dataset):
+    gj_found = False
     
-print get_gap_junctions_from_catmaid()
-print get_gap_junctions_from_durbin(durbin_data_path)
+    for gjds in dataset:
+        gjds_0 = gjds[0]
+        gjds_1 = gjds[1]
+        
+        gj_0 = gj[0]
+        gj_1 = gj[1]
+        
+        found0 = gj_0 == gjds_0 and gj_1 == gjds_1
+        found1 = gj_1 == gjds_0 and gj_0 == gjds_1
+        if found0 or found1:
+            gj_found = True
+    
+    return gj_found
+        
+        
+
+# Get the gap junctions and replace neuron names with their classes
+# also translate the data into a common format: tuples of (neuronClass1, neuronClass2, datasetName)
+christine_gap_junctions = get_gap_junctions_from_catmaid()
+durbin_gap_junctions = get_gap_junctions_from_durbin(durbin_data_path)
+
+
+gj_in_both = []
+gj_in_christine_dataset_only = []
+gj_in_durbin_dataset_only = []
+
+for gj in christine_gap_junctions:
+    
+    if gj_in_dataset(gj, durbin_gap_junctions):
+        gj_in_both.append(gj)
+    else:
+        gj_in_christine_dataset_only.append(gj)
+        
+        
+for gj in durbin_gap_junctions:
+    
+    if gj_in_dataset(gj, christine_gap_junctions):
+        gj_in_both.append(gj)
+    else:
+        gj_in_durbin_dataset_only.append(gj)
+ 
+print len(christine_gap_junctions)
+print len(durbin_gap_junctions)
+#print len(gj_in_both)
+#print len(gj_in_christine_dataset_only)
+#print len(gj_in_durbin_dataset_only)
