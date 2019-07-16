@@ -69,7 +69,7 @@ def get_gap_junctions_from_catmaid():
         auth=CatmaidApiTokenAuth(token)
     ).json()
     
-    synapses = []
+    synapses = set()
     
     for synapse_id, partners in connector_response['partners'].items():
 
@@ -84,11 +84,11 @@ def get_gap_junctions_from_catmaid():
        neuron1_name = skid_to_name[neuron1_id].replace('[', '').replace(']', '')
        neuron2_name = skid_to_name[neuron2_id].replace('[', '').replace(']', '')
        
-       neuron1_class = nclass(neuron1_name)
-       neuron2_class = nclass(neuron2_name)
+       n_classes = [nclass(neuron1_name), nclass(neuron2_name)]
+       n_classes.sort()
        
-       processed_synapse = (neuron1_class, neuron2_class, 'Christine Dataset')
-       synapses.append(processed_synapse)
+       processed_synapse = (n_classes[0], n_classes[1])
+       synapses.add(processed_synapse)
     
     return synapses
 
@@ -147,7 +147,7 @@ def get_gap_junctions_from_durbin(path):
         edges[('N2U', 'Send', 'ADEL', 'RMGL')] = 3
         edges[('N2U', 'Send', 'ADER', 'RMGR')] = 2
         
-        edges_done = []
+        edges_done = set()
     
         for edge, synapses in edges.items():
             
@@ -156,9 +156,9 @@ def get_gap_junctions_from_durbin(path):
             dataset = {'N2U': 'white_adult', 'JSH': 'white_l4'}[dataset]
             
             if typ == 'Gap_junction' and (post, pre, dataset) not in edges_done:
-                pre_class = nclass(pre)
-                post_class = nclass(post)
-                edges_done.append((pre_class, post_class, dataset))
+                n_classes = [nclass(pre), nclass(post)]
+                n_classes.sort()
+                edges_done.add((n_classes[0], n_classes[1]))
 
     return edges_done     
 
@@ -208,6 +208,14 @@ for gj in durbin_gap_junctions:
  
 print len(christine_gap_junctions)
 print len(durbin_gap_junctions)
+print christine_gap_junctions
+print durbin_gap_junctions
+print 'INTERSECTION #################################################'
+print len(christine_gap_junctions & durbin_gap_junctions)
+print 'UNIQUE TO DURBIN #################################################'
+print len(durbin_gap_junctions - christine_gap_junctions)
+print 'UNIQUE TO CHRISTINE ##############################################'
+print len(christine_gap_junctions - durbin_gap_junctions)
 #print len(gj_in_both)
 #print len(gj_in_christine_dataset_only)
 #print len(gj_in_durbin_dataset_only)
